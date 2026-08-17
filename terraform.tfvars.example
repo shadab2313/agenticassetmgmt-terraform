@@ -63,3 +63,23 @@ certificate_arn = ""
 
 ui_instance_count  = 1
 api_instance_count = 1
+
+# ---------------------------------------------------------------------------
+# NAT instance (optional)
+#
+# The pre-existing NAT Gateway costs a flat ~$66/month regardless of traffic.
+# A small self-managed instance does the same job for ~$3.50/month, trading
+# away AWS's managed multi-AZ failover. Off by default — this stack never
+# touches your NAT Gateway or route tables unless you opt in.
+#
+# Rollout: enable + apply (creates the instance only, zero traffic impact) →
+# verify it over SSM → flip use_nat_instance_for_egress + apply (cuts over
+# the one route) → confirm the app and SSM still work → only then delete the
+# old NAT Gateway by hand to actually realize the savings.
+# ---------------------------------------------------------------------------
+
+nat_instance_enabled        = false
+use_nat_instance_for_egress = false
+private_route_table_id      = ""
+existing_nat_gateway_id     = ""
+nat_instance_subnet_id      = ""

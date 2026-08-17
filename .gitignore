@@ -22,3 +22,6 @@ files.zip
 
 # OS
 .DS_Store
+
+# Claude Code personal overrides
+.claude/settings.local.json

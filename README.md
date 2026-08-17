@@ -96,6 +96,38 @@ AWS refuses to attach a certificate to the ALB until it's `ISSUED`, so `domain_n
 
 Already have a certificate ARN? Set `certificate_arn` directly and it takes precedence over `domain_name`.
 
+## Replacing the NAT Gateway with a NAT instance
+
+A NAT Gateway's flat hourly charge (~$66/month) dominates a low-traffic dev environment's bill — often more than the entire app tier combined. `nat_instance.tf` can swap it for a self-managed `t3a.nano` doing the same job for ~$3.50/month. Off by default; opt in via `nat_instance_enabled`.
+
+This is the one place the "Terraform touches nothing it doesn't own" rule (see `network.tf`) has a deliberate, narrow exception: one route in your private route table, toggled between the existing NAT Gateway and the new instance — never the route table itself.
+
+Two flags keep the cutover reversible instead of a single risky `apply`:
+
+```bash
+# 1. Stand the instance up. Zero traffic impact — the live route still
+#    points at the existing NAT Gateway.
+#    Set in terraform.tfvars: nat_instance_enabled = true
+terraform apply
+
+# 2. Verify it before it carries anything real.
+aws ssm start-session --target "$(terraform output -raw nat_instance_id)"
+#   sysctl net.ipv4.ip_forward        # expect: = 1
+#   sudo iptables -t nat -L -n -v     # expect: a MASQUERADE rule
+
+# 3. Cut over. Updates the one route in place.
+#    Set in terraform.tfvars: use_nat_instance_for_egress = true
+terraform apply
+
+# 4. Confirm the app and SSM still work. If not, flip
+#    use_nat_instance_for_egress back to false and apply — instant
+#    rollback, doesn't depend on the instance being reachable.
+curl "$(terraform output -raw app_url)"
+aws ssm start-session --target "$(terraform output -json instance_ids | jq -r .ui[0])"
+```
+
+Once stable, delete the old NAT Gateway and release its EIP by hand (`aws ec2 delete-nat-gateway`, `aws ec2 release-address`) — that's the step that actually stops the old charge. Left running alongside the new instance until you're confident, by design.
+
 ## Cost
 
 | Item | Monthly |

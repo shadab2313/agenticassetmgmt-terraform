@@ -3,7 +3,12 @@
 # and why security groups can reference each other directly.
 #
 # Everything here is a lookup. Terraform will not modify your VPC, subnets,
-# NAT gateway or route tables, and `terraform destroy` will not touch them.
+# or route tables, and `terraform destroy` will not touch them — with one
+# deliberate exception: nat_instance.tf manages a single route in the
+# private route table (0.0.0.0/0), toggled between the pre-existing NAT
+# Gateway and an optional cheaper NAT instance. Same pattern as database.tf
+# mutating one rule on a security group it doesn't own, without taking
+# ownership of the whole resource.
 
 locals {
   name = "${var.project}-${var.environment}"
