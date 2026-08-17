@@ -1,0 +1,641 @@
+<title>agenticassetmgmt — AWS Architecture</title>
+<style>
+  :root {
+    --bg: #f2f5f4;
+    --surface: #ffffff;
+    --surface-2: #e8edec;
+    --border: #d2d9d7;
+    --text: #1b2523;
+    --text-dim: #56635f;
+    --text-faint: #859089;
+
+    --tf: #1c7a72;
+    --tf-bg: #dff2ef;
+    --tf-border: #b6e0da;
+
+    --untracked: #a86420;
+    --untracked-bg: #f8ecd9;
+    --untracked-border: #edd6ab;
+
+    --critical: #a83226;
+    --critical-bg: #fae1de;
+    --critical-border: #f0bcb5;
+
+    --high: #b25e1e;
+    --high-bg: #f9e7d6;
+    --high-border: #f0cda4;
+
+    --medium: #93741c;
+    --medium-bg: #f5eed4;
+    --medium-border: #e6d69f;
+
+    --info: #3d5f80;
+    --info-bg: #e3ebf1;
+    --info-border: #c3d3e0;
+
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1517;
+      --surface: #161e21;
+      --surface-2: #1b2427;
+      --border: #2a3538;
+      --text: #dfe7e5;
+      --text-dim: #96a29e;
+      --text-faint: #62706b;
+
+      --tf: #5cc4b8;
+      --tf-bg: #133633;
+      --tf-border: #1f4d47;
+
+      --untracked: #e0a552;
+      --untracked-bg: #3a2c15;
+      --untracked-border: #52401f;
+
+      --critical: #ef7669;
+      --critical-bg: #3a1d19;
+      --critical-border: #5c2b24;
+
+      --high: #e59259;
+      --high-bg: #3a2716;
+      --high-border: #573a20;
+
+      --medium: #d9c069;
+      --medium-bg: #352c15;
+      --medium-border: #4d4020;
+
+      --info: #8bb0d1;
+      --info-bg: #182531;
+      --info-border: #24384a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1517;
+    --surface: #161e21;
+    --surface-2: #1b2427;
+    --border: #2a3538;
+    --text: #dfe7e5;
+    --text-dim: #96a29e;
+    --text-faint: #62706b;
+    --tf: #5cc4b8;
+    --tf-bg: #133633;
+    --tf-border: #1f4d47;
+    --untracked: #e0a552;
+    --untracked-bg: #3a2c15;
+    --untracked-border: #52401f;
+    --critical: #ef7669;
+    --critical-bg: #3a1d19;
+    --critical-border: #5c2b24;
+    --high: #e59259;
+    --high-bg: #3a2716;
+    --high-border: #573a20;
+    --medium: #d9c069;
+    --medium-bg: #352c15;
+    --medium-border: #4d4020;
+    --info: #8bb0d1;
+    --info-bg: #182531;
+    --info-border: #24384a;
+  }
+  :root[data-theme="light"] {
+    --bg: #f2f5f4;
+    --surface: #ffffff;
+    --surface-2: #e8edec;
+    --border: #d2d9d7;
+    --text: #1b2523;
+    --text-dim: #56635f;
+    --text-faint: #859089;
+    --tf: #1c7a72;
+    --tf-bg: #dff2ef;
+    --tf-border: #b6e0da;
+    --untracked: #a86420;
+    --untracked-bg: #f8ecd9;
+    --untracked-border: #edd6ab;
+    --critical: #a83226;
+    --critical-bg: #fae1de;
+    --critical-border: #f0bcb5;
+    --high: #b25e1e;
+    --high-bg: #f9e7d6;
+    --high-border: #f0cda4;
+    --medium: #93741c;
+    --medium-bg: #f5eed4;
+    --medium-border: #e6d69f;
+    --info: #3d5f80;
+    --info-bg: #e3ebf1;
+    --info-border: #c3d3e0;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+  }
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  /* ---------- Header ---------- */
+  header { display: flex; flex-direction: column; gap: 10px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  h1 {
+    font-size: clamp(26px, 3.4vw, 34px);
+    font-weight: 650;
+    margin: 0;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .subtitle { color: var(--text-dim); font-size: 15px; max-width: 68ch; }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .meta-row b { color: var(--text); font-weight: 600; }
+
+  /* ---------- Legend ---------- */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; color: var(--text-dim); }
+  .swatch { width: 13px; height: 13px; border-radius: 3px; flex: none; border: 1.5px solid transparent; }
+
+  /* ---------- Section headings ---------- */
+  section { display: flex; flex-direction: column; gap: 16px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h2 {
+    font-size: 19px;
+    font-weight: 650;
+    margin: 0;
+    letter-spacing: -0.005em;
+  }
+  .section-note { font-size: 13px; color: var(--text-faint); }
+
+  /* ---------- Findings ---------- */
+  .findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-left: 3px solid var(--sev-color);
+  }
+  .finding.critical { --sev-color: var(--critical); }
+  .finding.high { --sev-color: var(--high); }
+  .finding.medium { --sev-color: var(--medium); }
+  .finding.info { --sev-color: var(--info); }
+  .finding.tf { --sev-color: var(--tf); }
+  .chip {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 5px;
+    color: var(--sev-color);
+    background: color-mix(in srgb, var(--sev-color) 16%, transparent);
+  }
+  .finding h3 { margin: 0; font-size: 15px; font-weight: 620; }
+  .finding p { margin: 0; font-size: 13.5px; color: var(--text-dim); }
+  .finding code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+  /* ---------- Diagram ---------- */
+  .diagram-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    overflow-x: auto;
+  }
+  .diagram-wrap pre.mermaid { margin: 0; min-width: 920px; }
+
+  /* ---------- Tables ---------- */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow-x: auto;
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 720px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  td.mono, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12.3px; }
+  td.dim { color: var(--text-dim); }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .tag.tf { color: var(--tf); background: var(--tf-bg); border: 1px solid var(--tf-border); }
+  .tag.untracked { color: var(--untracked); background: var(--untracked-bg); border: 1px solid var(--untracked-border); }
+  .tag.warn { color: var(--critical); background: var(--critical-bg); border: 1px solid var(--critical-border); }
+  .arn { word-break: break-all; }
+  .rule-list { display: flex; flex-direction: column; gap: 4px; }
+  .rule-list .flagged { color: var(--critical); font-weight: 600; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    font-size: 12.5px;
+    color: var(--text-faint);
+  }
+
+  a { color: var(--tf); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .finding, .table-wrap, .diagram-wrap { transition: border-color 0.15s ease; }
+  }
+</style>
+
+<div class="page">
+
+  <header>
+    <div class="eyebrow">Live AWS snapshot &middot; read-only</div>
+    <h1>agenticassetmgmt — AWS architecture</h1>
+    <p class="subtitle">The Terraform-managed application stack, plus the pre-existing VPC, subnets, and database it deploys into. Pulled directly from the AWS API.</p>
+    <div class="meta-row">
+      <span>Account <b>517392055830</b></span>
+      <span>Region <b>us-east-1</b></span>
+      <span>VPC <b>vpc-0884d6abdb273561a</b> (10.0.0.0/16)</span>
+      <span>Domain <b>agenticassetmgmt.com</b> (Cloudflare DNS)</span>
+    </div>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><span class="swatch" style="background:var(--tf-bg);border-color:var(--tf-border)"></span>Terraform-managed (this repo)</div>
+    <div class="legend-item"><span class="swatch" style="background:var(--critical-bg);border-color:var(--critical-border)"></span>Flagged for review</div>
+    <div class="legend-item"><span class="swatch" style="background:var(--surface-2);border-color:var(--border)"></span>Pre-existing network / data (not created by Terraform)</div>
+  </div>
+
+  <section>
+    <div class="section-head">
+      <h2>Status</h2>
+      <span class="section-note">Scoped to the resources shown below</span>
+    </div>
+    <div class="findings">
+      <div class="finding tf">
+        <span class="chip">Resolved</span>
+        <h3>Untracked duplicate deployment decommissioned</h3>
+        <p>Deleted <code>alb-agenticassetmgmt-01</code>, its 2 target groups, both untracked EC2 instances, their EBS volumes, 2 security groups, and 2 Elastic IPs — roughly <strong>$46/month</strong>. Bastion access and RDS connectivity confirmed unaffected; the app stayed up throughout.</p>
+      </div>
+      <div class="finding tf">
+        <span class="chip">Resolved</span>
+        <h3>RDS public accessibility disabled</h3>
+        <p><code>agentic-asset-db</code> now has <code>PubliclyAccessible = false</code>. Team DB access is unaffected — it goes through an SSH tunnel to a bastion host inside the VPC, which resolves the RDS endpoint to its private IP regardless of this flag.</p>
+      </div>
+      <div class="finding info">
+        <span class="chip">Info</span>
+        <h3>DB access path isn't shown above</h3>
+        <p>The team reaches <code>agentic-asset-db</code> via <code>ssh -L 5433:…:5432 ec2-user@54.158.84.170</code> through a bastion host — untracked by Terraform, so it's intentionally left out of the diagram. That host's security group still allows SSH from <code>0.0.0.0/0</code>, not just a pinned IP; worth tightening since it's now confirmed load-bearing.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Network topology</h2>
+      <span class="section-note">Traffic paths, not physical layout — the ALB actually spans both AZs</span>
+    </div>
+    <div class="diagram-wrap">
+<pre class="mermaid">
+flowchart LR
+  Internet(["Internet"]):::infra
+  CF["Cloudflare DNS<br/>agenticassetmgmt.com<br/><i>CNAME → agentic-asset-dev-alb</i>"]:::infra
+
+  subgraph IAM["IAM — account-level, not VPC-scoped"]
+    direction TB
+    USERS["IAM users<br/>chaitraaws, shadabadmin"]:::tf
+    SSMGRP["IAM group · agentic-asset-dev-ssm-users<br/>ssm:StartSession, tag-scoped"]:::tf
+  end
+
+  subgraph VPC["VPC vpc-0884d6abdb273561a  ·  10.0.0.0/16"]
+    direction LR
+    IGW{{"Internet Gateway"}}:::infra
+    NAT{{"NAT Gateway"}}:::infra
+
+    subgraph PUB["Public subnets — 10.0.1.0/24 · 10.0.2.0/24"]
+      direction TB
+      ALB1["ALB · agentic-asset-dev-alb<br/>:80 → 301 · :443 TLS"]:::tf
+    end
+
+    subgraph PRIV["Private subnets — 10.0.11.0/24 · 10.0.12.0/24"]
+      direction TB
+      UI1["EC2 · agentic-asset-dev-ui-0 · t3.small<br/>:3000 → container :80 · Apache/2.4<br/>fleet-agent-ai:latest"]:::tf
+      API1["EC2 · agentic-asset-dev-api-0 · t3.small<br/>:8080 → container :8000 · uvicorn/FastAPI<br/>fleetdriverassistance:latest"]:::tf
+    end
+
+    RDS[("RDS · agentic-asset-db<br/>Postgres :5432 · PubliclyAccessible = false")]:::tf
+  end
+
+  Internet --> CF --> IGW
+  IGW --> ALB1
+
+  ALB1 -->|"TG ui · default"| UI1
+  ALB1 -->|"TG api · /api/*"| API1
+
+  UI1 -->|"server-side calls"| API1
+  API1 -->|":5432"| RDS
+
+  NAT -.outbound only.-> UI1
+  NAT -.outbound only.-> API1
+
+  USERS --> SSMGRP
+  SSMGRP -.session, no SSH.-> UI1
+  SSMGRP -.session, no SSH.-> API1
+
+  classDef tf fill:#dbeee9,stroke:#1c7a72,color:#123a35,stroke-width:1.5px;
+  classDef flagged fill:#f7d9d4,stroke:#a83226,color:#5c1a12,stroke-width:2.5px;
+  classDef infra fill:#e6e9e8,stroke:#8b9793,color:#2a332f,stroke-width:1px;
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Load balancers &amp; listeners</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Origin</th><th>Listeners</th><th>Certificate</th><th>Security group</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">agentic-asset-dev-alb</td>
+            <td><span class="tag tf">Terraform</span></td>
+            <td class="mono dim">:80 → 301 redirect<br/>:443 HTTPS</td>
+            <td class="mono dim arn">…3dfe1b61-cc7b-4134<br/>agenticassetmgmt.com · ISSUED</td>
+            <td class="mono dim">sg-09e6d1ba8ed59a07b</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ARN</th></tr></thead>
+        <tbody>
+          <tr><td class="mono dim arn">arn:aws:elasticloadbalancing:us-east-1:517392055830:loadbalancer/app/agentic-asset-dev-alb/2bd120aeb009fe53</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Target groups</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Target group</th><th>Origin</th><th>Port</th><th>Health check</th><th>Target</th><th>State</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">agentic-asset-dev-tg-ui</td>
+            <td><span class="tag tf">Terraform</span></td>
+            <td class="mono">HTTP&nbsp;:3000</td>
+            <td class="mono dim">GET /</td>
+            <td class="mono dim">i-07a72ee5e37748a7a</td>
+            <td class="mono" style="color:var(--tf)">healthy</td>
+          </tr>
+          <tr>
+            <td class="mono">agentic-asset-dev-tg-api</td>
+            <td><span class="tag tf">Terraform</span></td>
+            <td class="mono">HTTP&nbsp;:8080</td>
+            <td class="mono dim">GET /health</td>
+            <td class="mono dim">i-08ab14638f172c4ce</td>
+            <td class="mono" style="color:var(--tf)">healthy</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>EC2 instances</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Instance ID</th><th>Origin</th><th>Type</th><th>AZ / Subnet</th><th>Private IP</th><th>Public IP</th><th>IAM role</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">agentic-asset-dev-ui-0</td>
+            <td class="mono dim">i-07a72ee5e37748a7a</td>
+            <td><span class="tag tf">Terraform</span></td>
+            <td class="mono dim">t3.small</td>
+            <td class="mono dim">us-east-1a<br/>subnet-0016ad99bcdbf2ff6</td>
+            <td class="mono dim">10.0.11.229</td>
+            <td class="mono dim">—</td>
+            <td class="mono dim">agentic-asset-dev-instance<br/>(SSM + CloudWatch)</td>
+          </tr>
+          <tr>
+            <td class="mono">agentic-asset-dev-api-0</td>
+            <td class="mono dim">i-08ab14638f172c4ce</td>
+            <td><span class="tag tf">Terraform</span></td>
+            <td class="mono dim">t3.small</td>
+            <td class="mono dim">us-east-1a<br/>subnet-0016ad99bcdbf2ff6</td>
+            <td class="mono dim">10.0.11.234</td>
+            <td class="mono dim">—</td>
+            <td class="mono dim">agentic-asset-dev-instance<br/>(SSM + CloudWatch)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Services running on each instance</h2>
+      <span class="section-note">Read live off each host via SSM (<code class="mono">docker ps</code>, listening sockets) — not inferred from Terraform config</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Instance</th><th>Container</th><th>Image</th><th>Port mapping</th><th>Web server / runtime</th><th>OS</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">agentic-asset-dev-ui-0</td>
+            <td class="mono dim">app</td>
+            <td class="mono dim arn">shadab2313/fleet-agent-ai:latest</td>
+            <td class="mono dim">host :3000 → container :80</td>
+            <td class="mono dim">Apache/2.4.68 <span class="dim">(serving a built SPA)</span></td>
+            <td class="mono dim">Amazon Linux 2023</td>
+          </tr>
+          <tr>
+            <td class="mono">agentic-asset-dev-api-0</td>
+            <td class="mono dim">app</td>
+            <td class="mono dim arn">shadab2313/fleetdriverassistance:latest</td>
+            <td class="mono dim">host :8080 → container :8000</td>
+            <td class="mono dim">uvicorn <span class="dim">(FastAPI)</span></td>
+            <td class="mono dim">Amazon Linux 2023</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Instance</th><th>Other listening ports (host-level, not internet-exposed)</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono dim">agentic-asset-dev-ui-0</td>
+            <td class="mono dim">22/tcp — sshd <span class="dim">(no security group rule allows this in — unreachable, just running)</span></td>
+          </tr>
+          <tr>
+            <td class="mono dim">agentic-asset-dev-api-0</td>
+            <td class="mono dim">22/tcp — sshd <span class="dim">(no security group rule allows this in — unreachable, just running)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Security groups</h2>
+      <span class="section-note">Scoped to the Terraform-managed stack — the RDS security group also allows the bastion host and the EC2 Instance Connect endpoint, neither shown here</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Security group</th><th>Attached to</th><th>Inbound</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">sg-09e6d1ba8ed59a07b<br/><span class="dim">agentic-asset-dev-alb</span></td>
+            <td class="mono dim">ALB agentic-asset-dev-alb</td>
+            <td class="rule-list mono dim">
+              80/tcp ← 0.0.0.0/0<br/>
+              443/tcp ← 0.0.0.0/0
+            </td>
+          </tr>
+          <tr>
+            <td class="mono">sg-013b5254bb56dd0b8<br/><span class="dim">agentic-asset-dev-ui</span></td>
+            <td class="mono dim">agentic-asset-dev-ui-0</td>
+            <td class="rule-list mono dim">3000/tcp ← sg-09e6d1ba8ed59a07b (ALB)</td>
+          </tr>
+          <tr>
+            <td class="mono">sg-0d7c94b64a106646b<br/><span class="dim">agentic-asset-dev-api</span></td>
+            <td class="mono dim">agentic-asset-dev-api-0</td>
+            <td class="rule-list mono dim">
+              8080/tcp ← sg-09e6d1ba8ed59a07b (ALB)<br/>
+              8080/tcp ← sg-013b5254bb56dd0b8 (UI tier)
+            </td>
+          </tr>
+          <tr>
+            <td class="mono">sg-07d16efda276691dd<br/><span class="dim">rds-db-sg-agenticassetmgmt-03</span></td>
+            <td class="mono dim">RDS agentic-asset-db</td>
+            <td class="rule-list mono dim">
+              5432/tcp ← sg-0d7c94b64a106646b (Terraform API tier)
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Data &amp; DNS</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Resource</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono dim">RDS · agentic-asset-db</td>
+            <td class="mono dim">postgres · db.t4g.micro · single-AZ<br/>agentic-asset-db.c27qekk4mlqp.us-east-1.rds.amazonaws.com:5432<br/><span style="color:var(--tf)">PubliclyAccessible = false</span> <span class="dim">— team connects via SSH tunnel through an untracked bastion, not shown above</span></td>
+          </tr>
+          <tr>
+            <td class="mono dim">NAT Gateway</td>
+            <td class="mono dim">nat-1fd8da5b438afcd76 — outbound internet for both private subnets</td>
+          </tr>
+          <tr>
+            <td class="mono dim">Internet Gateway</td>
+            <td class="mono dim">igw-0182a2f7bd76f7f44</td>
+          </tr>
+          <tr>
+            <td class="mono dim">DNS · Cloudflare</td>
+            <td class="mono dim">agenticassetmgmt.com → CNAME → agentic-asset-dev-alb-1494665713.us-east-1.elb.amazonaws.com<br/>DNS-only (not proxied) · resolves to 98.85.186.99, 100.49.38.239</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Access control</h2>
+      <span class="section-note">Session Manager shell access to the ui/api instances — no SSH, no keys</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Resource</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono dim">IAM group</td>
+            <td class="mono dim">agentic-asset-dev-ssm-users</td>
+          </tr>
+          <tr>
+            <td class="mono dim">Members</td>
+            <td class="mono dim">chaitraaws, shadabadmin</td>
+          </tr>
+          <tr>
+            <td class="mono dim">Policy</td>
+            <td class="mono dim arn">agentic-asset-dev-ssm-session-access<br/><span class="dim">ssm:StartSession scoped by tag — Project=agentic-asset AND ManagedBy=terraform</span></td>
+          </tr>
+          <tr>
+            <td class="mono dim">Managed in</td>
+            <td class="mono dim">access.tf + access.auto.tfvars <span class="dim">(git-tracked — add/remove a name, open a PR)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Pulled live via AWS CLI against account 517392055830 (us-east-1) and cross-referenced with this repo's Terraform state — matches <code>terraform state list</code> exactly. Scoped to what Terraform manages (ALB, two target groups, two EC2 instances, their security groups, the SSM access group) plus the pre-existing VPC, subnets, and RDS database it deploys into. A second, untracked deployment previously existed in this account and has since been decommissioned. The bastion host used for DB access remains, by design — it isn't Terraform-managed and is intentionally left out of the diagram above.
+  </footer>
+
+</div>
