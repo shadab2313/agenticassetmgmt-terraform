@@ -91,8 +91,14 @@ variable "api_path_patterns" {
 # TLS
 # ---------------------------------------------------------------------------
 
+variable "domain_name" {
+  description = "Domain to request a DNS-validated ACM certificate for (e.g. agenticassetmgmt.com). Leave empty to skip cert creation. Ignored if certificate_arn is set."
+  type        = string
+  default     = ""
+}
+
 variable "certificate_arn" {
-  description = "ACM certificate ARN for HTTPS. Leave empty to run HTTP-only (fine for a first deploy, not for production). Must be in the same region as the ALB."
+  description = "ACM certificate ARN for HTTPS, if you already have one. Leave empty to have this stack request one for domain_name, or to run HTTP-only if domain_name is also empty. Must be in the same region as the ALB."
   type        = string
   default     = ""
 }

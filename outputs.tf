@@ -1,6 +1,25 @@
 output "app_url" {
   description = "Point a Route 53 alias record at the ALB, or hit this directly to test."
-  value       = var.certificate_arn == "" ? "http://${aws_lb.main.dns_name}" : "https://${aws_lb.main.dns_name}"
+  value       = local.has_https ? "https://${aws_lb.main.dns_name}" : "http://${aws_lb.main.dns_name}"
+}
+
+output "acm_certificate_arn" {
+  description = "Certificate bound to the ALB's HTTPS listener."
+  value       = local.certificate_arn
+}
+
+output "acm_certificate_status" {
+  description = "PENDING_VALIDATION until the CNAME below resolves, then ISSUED. No terraform apply needed for that transition — AWS updates it in the background."
+  value       = var.domain_name == "" || var.certificate_arn != "" ? null : aws_acm_certificate.main[0].status
+}
+
+output "acm_validation_record" {
+  description = "Add this CNAME in Cloudflare (DNS only, not proxied) to validate the certificate."
+  value = var.domain_name == "" || var.certificate_arn != "" ? null : {
+    name  = tolist(aws_acm_certificate.main[0].domain_validation_options)[0].resource_record_name
+    type  = tolist(aws_acm_certificate.main[0].domain_validation_options)[0].resource_record_type
+    value = tolist(aws_acm_certificate.main[0].domain_validation_options)[0].resource_record_value
+  }
 }
 
 output "alb_dns_name" {

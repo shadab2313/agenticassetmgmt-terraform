@@ -79,9 +79,22 @@ Both should answer from the placeholder servers in the user data. Once that work
 
 ## Adding HTTPS
 
-1. Request a certificate in ACM **in the same region as the ALB**. A cert in `us-east-1` will not attach to an ALB in `eu-west-1` — this catches people who are used to CloudFront, which does require `us-east-1`.
-2. Validate it via DNS.
-3. Set `certificate_arn` in `terraform.tfvars` and apply. Port 80 switches to a 301 redirect automatically.
+The ALB's region is fixed by `region` in `terraform.tfvars` — an ACM cert must be requested in that same region. (This only matters for an ALB; CloudFront is the one that specifically requires `us-east-1`.)
+
+**If your DNS is in Route 53**, request and validate the cert there, then set `certificate_arn`.
+
+**If your DNS is elsewhere (e.g. Cloudflare)**, set `domain_name` instead and this stack requests the cert for you:
+
+```bash
+terraform apply   # creates the ACM certificate, still PENDING_VALIDATION
+terraform output acm_validation_record
+```
+
+Add the CNAME from that output in Cloudflare — **DNS only / grey-clouded**, not proxied, or validation will never see it. ACM issues the certificate on its own once the record resolves (usually a few minutes) — check with `terraform output acm_certificate_status`.
+
+AWS refuses to attach a certificate to the ALB until it's `ISSUED`, so `domain_name` alone does not turn on HTTPS by itself. Once the status shows `ISSUED`, copy the ARN from `terraform output acm_certificate_arn` into `certificate_arn` in `terraform.tfvars` and apply again — that second apply is what actually creates the HTTPS listener and switches port 80 to a 301 redirect.
+
+Already have a certificate ARN? Set `certificate_arn` directly and it takes precedence over `domain_name`.
 
 ## Cost
 

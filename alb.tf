@@ -86,7 +86,7 @@ resource "aws_lb_listener" "http" {
   protocol          = "HTTP"
 
   dynamic "default_action" {
-    for_each = var.certificate_arn == "" ? [] : [1]
+    for_each = local.has_https ? [1] : []
     content {
       type = "redirect"
       redirect {
@@ -98,7 +98,7 @@ resource "aws_lb_listener" "http" {
   }
 
   dynamic "default_action" {
-    for_each = var.certificate_arn == "" ? [1] : []
+    for_each = local.has_https ? [] : [1]
     content {
       type             = "forward"
       target_group_arn = local.default_target_group_arn
@@ -107,13 +107,13 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener" "https" {
-  count = var.certificate_arn == "" ? 0 : 1
+  count = local.has_https ? 1 : 0
 
   load_balancer_arn = aws_lb.main.arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = var.certificate_arn
+  certificate_arn   = local.certificate_arn
 
   default_action {
     type             = "forward"
@@ -131,7 +131,7 @@ resource "aws_lb_listener" "https" {
 resource "aws_lb_listener_rule" "api" {
   count = local.create_api_path_rule ? 1 : 0
 
-  listener_arn = var.certificate_arn == "" ? aws_lb_listener.http.arn : aws_lb_listener.https[0].arn
+  listener_arn = local.has_https ? aws_lb_listener.https[0].arn : aws_lb_listener.http.arn
   priority     = 100
 
   condition {

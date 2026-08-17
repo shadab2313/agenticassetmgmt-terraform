@@ -49,8 +49,16 @@ api_port = 8080
 ui_health_check_path  = "/"
 api_health_check_path = "/api/health"
 
-# Leave empty for an HTTP-only first deploy. Request a cert in ACM in the same
-# region as the ALB, then paste the ARN here and re-apply.
+# Leave both empty for an HTTP-only first deploy.
+#
+# DNS in Route 53: request/validate the cert there, then set certificate_arn.
+# DNS elsewhere (e.g. Cloudflare): set domain_name and apply; this stack
+# requests the cert and `terraform output acm_validation_record` gives you the
+# CNAME to add at your DNS provider. Once `terraform output
+# acm_certificate_status` shows ISSUED, copy the ARN from
+# `terraform output acm_certificate_arn` into certificate_arn below and apply
+# again — that second apply is what attaches it to the ALB.
+domain_name     = ""
 certificate_arn = ""
 
 ui_instance_count  = 1
