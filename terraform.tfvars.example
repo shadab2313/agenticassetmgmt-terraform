@@ -1,0 +1,57 @@
+project     = "fleet-agent"
+environment = "dev"
+region      = "us-east-1"
+
+# ---------------------------------------------------------------------------
+# Existing network. All three are required; there are no sensible defaults.
+#
+# Find them with:
+#
+#   aws rds describe-db-instances \
+#     --query 'DBInstances[*].{db:DBInstanceIdentifier,vpc:DBSubnetGroup.VpcId,sg:VpcSecurityGroups[0].VpcSecurityGroupId,endpoint:Endpoint.Address}' \
+#     --output table
+#
+#   aws ec2 describe-subnets --filters Name=vpc-id,Values=vpc-XXXX \
+#     --query 'Subnets[*].{id:SubnetId,az:AvailabilityZone,cidr:CidrBlock,public:MapPublicIpOnLaunch}' \
+#     --output table
+# ---------------------------------------------------------------------------
+
+vpc_id = "vpc-XXXXXXXXXXXXXXXXX"
+
+# Public subnets, at least two, in different AZs. AWS rejects a single-AZ ALB.
+alb_subnet_ids = ["subnet-XXXXXXXXXXXXXXXXX", "subnet-YYYYYYYYYYYYYYYYY"]
+
+# Private subnets for the instances. One entry keeps compute in a single AZ.
+# These need outbound internet via NAT, or SSM VPC endpoints, or the SSM
+# agent will not register and you will have no way to get a shell.
+app_subnet_ids = ["subnet-ZZZZZZZZZZZZZZZZZ"]
+
+# ---------------------------------------------------------------------------
+# Existing database
+# ---------------------------------------------------------------------------
+
+existing_db_security_group_id = "sg-XXXXXXXXXXXXXXXXX"
+existing_db_host              = "mydb.abc123.us-east-1.rds.amazonaws.com"
+db_port                       = 5432
+
+# Optional: if the password lives in Secrets Manager, the API instance role
+# is granted read access to this ARN automatically.
+existing_db_secret_arn = ""
+
+# ---------------------------------------------------------------------------
+# Application
+# ---------------------------------------------------------------------------
+
+ui_port  = 3000
+api_port = 8080
+
+# These paths must return 200 or the ALB marks every target unhealthy.
+ui_health_check_path  = "/"
+api_health_check_path = "/api/health"
+
+# Leave empty for an HTTP-only first deploy. Request a cert in ACM in the same
+# region as the ALB, then paste the ARN here and re-apply.
+certificate_arn = ""
+
+ui_instance_count  = 1
+api_instance_count = 1
