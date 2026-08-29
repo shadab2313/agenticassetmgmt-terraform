@@ -159,6 +159,12 @@ resource "aws_instance" "api" {
     DB_HOST=${var.existing_db_host}
     DB_PORT=${var.db_port}
     DB_SECRET_ARN=${var.existing_db_secret_arn}
+    ENV=${var.app_env}
+    GROQ_API_KEY=${var.groq_api_key}
+    GROQ_MODEL=${var.groq_model}
+    SECRET_KEY=${var.app_secret_key}
+    ALGORITHM=${var.jwt_algorithm}
+    ACCESS_TOKEN_EXPIRE_MINUTES=${var.access_token_expire_minutes}
     ENVEOF
 
      dnf install -y docker

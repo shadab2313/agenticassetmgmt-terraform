@@ -164,6 +164,52 @@ variable "existing_db_secret_arn" {
   default     = ""
 }
 
+# ---------------------------------------------------------------------------
+# Backend app config (written to /etc/app.env on the API instance)
+#
+# Unlike the DB password, these land directly in user_data and Terraform
+# state — same exposure the DB password comment above warns about. Fine for
+# now; migrate to Secrets Manager + runtime fetch if that stops being okay.
+# ---------------------------------------------------------------------------
+
+variable "app_env" {
+  description = "Value for the ENV var passed to the backend container."
+  type        = string
+  default     = "groq"
+}
+
+variable "groq_api_key" {
+  description = "Groq API key for the backend's LLM calls."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "groq_model" {
+  description = "Groq model identifier used by the backend."
+  type        = string
+  default     = "openai/gpt-oss-120b"
+}
+
+variable "app_secret_key" {
+  description = "Secret key used to sign JWTs. Generate with `openssl rand -hex 32` — do not use the placeholder default in anything real."
+  type        = string
+  sensitive   = true
+  default     = "change-this-to-a-random-secret-in-production"
+}
+
+variable "jwt_algorithm" {
+  description = "Algorithm used to sign JWTs."
+  type        = string
+  default     = "HS256"
+}
+
+variable "access_token_expire_minutes" {
+  description = "Minutes before an issued access token expires."
+  type        = number
+  default     = 60
+}
+
 variable "alb_default_target" {
   description = "Which tier receives traffic matching no listener rule."
   type        = string
